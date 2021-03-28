@@ -1,0 +1,46 @@
+
+.week-select {
+  margin: 10px;
+  text-align: center;
+}
+
+.week-range {
+  display: inline-block;
+  width: 300px;
+}
+
+.week-view {
+  display: flex;
+  margin: 10px;
+}
+
+.week-day {
+  flex: 0;
+  min-width: calc(100% / 7.0);
+  max-width: calc(100% / 7.0);
+  width: calc(100% / 7.0);
+  padding: 0 4px;
+}
+
+.week-day-name {
+  text-align: center;
+}
+
+.week-task-log {
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 5px;
+  background-color: var(--background-high);
+}
+
+.week-task-log-name {
+  margin-bottom: 10px;
+}
+
+.week-task-log-time {
+  text-align: right;
+}
+
+.week-task-summary {
+  text-align: right;
+}

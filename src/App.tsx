@@ -1,26 +1,65 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import { StateContext, initial, StateUpdateFunction, deserialize, State } from './state';
+import { Tasks } from './tasks';
+import { Week } from './week';
+import { debounce } from 'lodash';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+function restoreState() {
+  let state = window.localStorage.getItem('state');
+  if (state) {
+    return deserialize(state);
+  }
+  return initial;
 }
 
-export default App;
+function saveState(state: State) {
+  window.localStorage.setItem('state', JSON.stringify(state));
+}
+
+export function App() {
+  const [state, updateState] = React.useState(restoreState);
+
+  // force-update interface every minute
+  const [, forceUpdate] = React.useReducer(() => ({}), {});
+  let forceUpdateIntervalRef = React.useRef(0);
+  React.useEffect(() => {
+    forceUpdateIntervalRef.current = window.setInterval(forceUpdate, 60 * 1000);
+    return () => window.clearInterval(forceUpdateIntervalRef.current);
+  });
+
+  // debounce saving state on every change
+  let latestStateRef = React.useRef(state);
+  let debouncedSaveRef = React.useRef(debounce(
+    () => saveState(latestStateRef.current),
+    5000,
+    { trailing: true, leading: false },
+  ));
+
+  // save state before closing the page
+  React.useEffect(() => {
+    window.onbeforeunload = () => saveState(latestStateRef.current);
+    return () => { window.onbeforeunload = null; };
+  });
+
+  const updateStateWithFunction = (updateFunction: StateUpdateFunction) => {
+    let newState = updateFunction(state);
+    latestStateRef.current = newState;
+    debouncedSaveRef.current();
+    updateState(newState);
+  };
+
+  return (
+    <StateContext.Provider value={{ state, update: updateStateWithFunction }}>
+      <div className="App">
+        <Tasks/>
+        <Week/>
+      </div>
+      {/* <pre>
+        <code>
+          {JSON.stringify(state, null, 2)}
+        </code>
+      </pre> */}
+    </StateContext.Provider>
+  );
+}
