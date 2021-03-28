@@ -10,6 +10,7 @@ function restoreState() {
   if (state) {
     return deserialize(state);
   }
+  saveState(initial);
   return initial;
 }
 
@@ -18,7 +19,7 @@ function saveState(state: State) {
 }
 
 export function App() {
-  const [state, updateState] = React.useState(restoreState);
+  const [state, setState] = React.useState(restoreState);
 
   // force-update interface every minute
   const [, forceUpdate] = React.useReducer(() => ({}), {});
@@ -38,7 +39,12 @@ export function App() {
 
   // save state before closing the page
   React.useEffect(() => {
-    window.onbeforeunload = () => saveState(latestStateRef.current);
+    window.onbeforeunload = () => {
+      // persist state only if local storage hasn't been cleared manually
+      if (window.localStorage.getItem('state') !== null) {
+        saveState(latestStateRef.current);
+      }
+    };
     return () => { window.onbeforeunload = null; };
   });
 
@@ -46,7 +52,7 @@ export function App() {
     let newState = updateFunction(state);
     latestStateRef.current = newState;
     debouncedSaveRef.current();
-    updateState(newState);
+    setState(newState);
   };
 
   return (
