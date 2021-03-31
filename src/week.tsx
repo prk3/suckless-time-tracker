@@ -1,7 +1,7 @@
 import { DateTime, Duration } from 'luxon';
 import React from 'react';
 import { StateContext, Event } from './state';
-import { assert } from './utils';
+import { assert, groupTasksByTaskId } from './utils';
 
 import './week.css';
 
@@ -19,17 +19,17 @@ function weekLogFromEvents(events: Event[], startOfWeek: DateTime) {
 
         if (event.time <= endOfWeek && event.action === 'start') {
             // we can't start a task that has already been started
-            assert(started[event.task_id] === undefined);
-            started[event.task_id] = event.time;
+            assert(started[event.taskId] === undefined);
+            started[event.taskId] = event.time;
         }
 
         if (event.action === 'end') {
             // task should be started, otherwise it was started before this week and must be ignored
-            if (started[event.task_id] !== undefined) {
-                assert(started[event.task_id] <= event.time);
-                let day = week[started[event.task_id].weekday-1];
-                day[event.task_id] = day[event.task_id]?.plus(event.time.diff(started[event.task_id])) || event.time.diff(started[event.task_id]);
-                delete started[event.task_id];
+            if (started[event.taskId] !== undefined) {
+                assert(started[event.taskId] <= event.time);
+                let day = week[started[event.taskId].weekday-1];
+                day[event.taskId] = day[event.taskId]?.plus(event.time.diff(started[event.taskId])) || event.time.diff(started[event.taskId]);
+                delete started[event.taskId];
             }
         }
     }
@@ -59,7 +59,9 @@ function formatDuration(duration: Duration): string {
 export function Week() {
     const [startOfWeek, setStartOfWeek] = React.useState(DateTime.local().startOf('week'));
     const { state } = React.useContext(StateContext);
-    const tasks = Object.fromEntries(state.tasks.map(task => [task.id, task]));
+
+    const taskMap = React.useMemo(() => groupTasksByTaskId(state.tasks), [state.tasks]);
+    const week = React.useMemo(() => weekLogFromEvents(state.events, startOfWeek), [state.events, startOfWeek]);
 
     const oneWeekBack = () => {
         setStartOfWeek(startOfWeek.minus({ weeks: 1 }));
@@ -69,7 +71,6 @@ export function Week() {
         setStartOfWeek(startOfWeek.plus({ weeks: 1 }));
     }
 
-    let week = weekLogFromEvents(state.events, startOfWeek);
     return (
         <div>
             <div className="week-select">
@@ -83,7 +84,7 @@ export function Week() {
                         <div className="week-day-name" key="day">{startOfWeek.plus({ days: index }).toFormat('cccc')}</div>
                         {Object.entries(day).map(([taskId, duration]) => (
                             <div className="week-task-log" key={taskId}>
-                                <div className="week-task-log-name">{tasks[taskId].name}</div>
+                                <div className="week-task-log-name">{taskMap[taskId as any as number].name}</div>
                                 <div className="week-task-log-time">{formatDuration(duration)}</div>
                             </div>
                         ))}

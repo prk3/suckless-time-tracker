@@ -1,14 +1,16 @@
 import { DateTime } from 'luxon';
 import React from 'react';
-import { Event, StateContext, TaskId } from './state';
-import { assert, cs, onlyThisElementClick, workTimeFromStory } from './utils';
+import { Event, ManDays, StateContext, TaskId } from './state';
+import { Task } from './task';
+import { assert, groupEventsByTaskId, groupTasksByTaskId, calculateTotalTimeFromEvents } from './utils';
 import './tasks.css';
-
-const HOURS_IN_ONE_MAN_DAY = 7;
 
 export function Tasks() {
     const { state, update } = React.useContext(StateContext);
     const [filter, setFilter] = React.useState('');
+
+    let taskMap = React.useMemo(() => groupTasksByTaskId(state.tasks), [state.tasks]);
+    let story = React.useMemo(() => groupEventsByTaskId(state.events), [state.events]);
 
     const addNewTask = () => {
         update(state => {
@@ -16,19 +18,18 @@ export function Tasks() {
 
             return {
                 ...state,
-                tasks: [{
+                tasks: [
+                    {
                         id,
                         name: "",
                         estimation: null,
+                        deleted: false,
                     },
                     ...state.tasks,
                 ],
-                taskStory: {
-                    ...state.taskStory,
-                    [id]: [],
-                },
             };
         });
+        // Focus on the new task.
         window.setTimeout(() => {
             // @ts-ignore
             document.querySelector(".task .name")?.focus();
@@ -39,166 +40,136 @@ export function Tasks() {
         setFilter(ev.target.value);
     };
 
-    const updateTaskName = (id: TaskId) => (ev: any) => {
+    const updateTaskName = (id: TaskId) => (name: string) => {
+        // Task must exist and not be deleted.
+        assert(taskMap[id] !== undefined);
+        assert(taskMap[id].deleted === false);
+
         update(state => ({
             ...state,
             tasks: state.tasks.map(task => task.id !== id
                 ? task
-                : {
-                    ...task,
-                    name: ev.target.value,
-                }
+                : { ...task, name }
             ),
         }));
     };
 
-    const updateTaskEstimation = (id: TaskId) => (ev: any) => {
+    const updateTaskEstimation = (id: TaskId) => (estimation: ManDays | null) => {
+        // Task must exist and not be deleted.
+        assert(taskMap[id] !== undefined);
+        assert(taskMap[id].deleted === false);
+
         update(state => ({
             ...state,
             tasks: state.tasks.map(task => task.id !== id
                 ? task
-                : {
-                    ...task,
-                    estimation: Number(ev.target.value) || null,
-                }
+                : { ...task, estimation }
             ),
         }));
     };
 
-    const setActiveTask = (id: TaskId) => (ev: any) => {
+    const updateTaskActive = (id: TaskId) => (active: boolean) => {
+        // Task must exist and not be deleted.
+        assert(taskMap[id] !== undefined);
+        assert(taskMap[id].deleted === false);
+
         update(state => {
-            // we should not activate already active tasks
-            assert(state.activeTask !== id);
-            assert(state.taskStory[id] !== undefined);
+            if (active) {
+                // Task must be inactive if we want to activate it.
+                assert(state.activeTask !== id);
 
-            let newEvents = [...state.events];
-            let newStory = { ...state.taskStory };
+                let newEvents = [...state.events];
 
-            if (state.activeTask !== null) {
-                let endEvent: Event = {
-                    task_id: state.activeTask,
+                if (state.activeTask !== null) {
+                    newEvents.push({
+                        taskId: state.activeTask,
+                        time: DateTime.local(),
+                        action: 'end',
+                    });
+                }
+                newEvents.push({
+                    taskId: id,
+                    time: DateTime.local(),
+                    action: 'start',
+                });
+
+                return {
+                    ...state,
+                    activeTask: id,
+                    events: newEvents,
+                };
+            } else {
+                // Task must be active if we want to deactivate it.
+                assert(state.activeTask === id);
+
+                let newEvent: Event = {
+                    taskId: state.activeTask as TaskId,
                     time: DateTime.local(),
                     action: 'end',
                 };
-                newEvents.push(endEvent);
-                newStory[state.activeTask] = [...newStory[state.activeTask], endEvent];
+
+                return {
+                    ...state,
+                    activeTask: null,
+                    events: [...state.events, newEvent],
+                };
             }
-            let startEvent: Event = {
-                task_id: id,
-                time: DateTime.local(),
-                action: 'start',
-            };
-            newEvents.push(startEvent);
-            newStory[id] = [...newStory[id], startEvent];
-
-            return {
-                ...state,
-                activeTask: id,
-                events: newEvents,
-                taskStory: newStory,
-            };
         });
     };
 
-    const setInactiveTask = (id: TaskId) => (ev: any) => {
+    const deleteTask = (id: TaskId) => () => {
+        // Task must exist and not be deleted.
+        assert(taskMap[id] !== undefined);
+        assert(taskMap[id].deleted === false);
+
         update(state => {
-            // we should only deactivate active tasks
-            // the task should exist and have story
-            assert(state.activeTask === id);
-            assert(state.taskStory[id] !== undefined);
-
-            let newEvent: Event = {
-                task_id: state.activeTask as TaskId,
-                time: DateTime.local(),
-                action: 'end',
-            };
+            let events;
+            let activeTask;
+            if (state.activeTask === id) {
+                events = [
+                    ...state.events,
+                    {
+                        taskId: state.activeTask,
+                        time: DateTime.local(),
+                        action: "end" as "end",
+                    }
+                ];
+                activeTask = null;
+            } else {
+                events = state.events;
+                activeTask = state.activeTask;
+            }
 
             return {
                 ...state,
-                activeTask: null,
-                events: [...state.events, newEvent],
-                taskStory: { ...state.taskStory, [id]: [...state.taskStory[id], newEvent] },
+                tasks: state.tasks.map(task => task.id !== id
+                    ? task
+                    : { ...task, deleted: true }
+                ),
+                activeTask,
+                events,
             };
         });
-    };
-
-    const incrementTaskEstimation = (id: TaskId) => (ev: any) => {
-        update(state => ({
-            ...state,
-            tasks: state.tasks.map(task => task.id !== id
-                ? task
-                : {
-                    ...task,
-                    estimation: (task.estimation || 0) + 1,
-                }
-            ),
-        }));
-    };
-
-    const decrementTaskEstimation = (id: TaskId) => (ev: any) => {
-        update(state => ({
-            ...state,
-            tasks: state.tasks.map(task => task.id !== id
-                ? task
-                : {
-                    ...task,
-                    estimation: ((task.estimation || 1) - 1) || null,
-                }
-            ),
-        }));
     };
 
     const tasks = state.tasks
+        .filter(task => !task.deleted)
         .filter(task => filter.trim() === "" || task.name.includes(filter.trim()))
         .map(task => {
             let active = task.id === state.activeTask;
-            let timeProgressElement = null;
-
-            if (task.estimation !== null) {
-                let timeUsed = workTimeFromStory(state.taskStory[task.id]).as('hours') / HOURS_IN_ONE_MAN_DAY;
-                let timeUsedNormalized = timeUsed / task.estimation;
-                let progressClassName;
-
-                    if (timeUsedNormalized < 0.5) progressClassName = 'ok';
-                else if (timeUsedNormalized < 0.7) progressClassName = 'worse';
-                else if (timeUsedNormalized < 0.9) progressClassName = 'bad';
-                else                               progressClassName = 'critical';
-
-                timeProgressElement = (
-                    <span>Time: <progress
-                        className={cs(progressClassName)}
-                        value={Math.min(timeUsedNormalized, 1.0)}
-                        title={`${timeUsed.toFixed(1)} of ${task.estimation} man days`}
-                        max="1"
-                        />
-                    </span>
-                );
-            }
+            let timeSpent = calculateTotalTimeFromEvents(story[task.id] || []);
 
             return (
-                <div
-                    className={cs("task", active && "active")}
+                <Task
                     key={task.id}
-                    onClick={onlyThisElementClick(active ? setInactiveTask(task.id) : setActiveTask(task.id))
-                }>
-                    <div><textarea className="name" value={task.name} onChange={updateTaskName(task.id)}/></div>
-                    <div>{"Estimation: "}
-                        <button type="button" className="button minus" onClick={decrementTaskEstimation(task.id)}>-</button>
-                        {" "}
-                        <input
-                            className="estimation"
-                            min="1"
-                            step="1"
-                            type="number"
-                            value={task.estimation || ""}
-                            onChange={updateTaskEstimation(task.id)}
-                        />
-                        {" "}
-                        <button type="button" className="button plus" onClick={incrementTaskEstimation(task.id)}>+</button>
-                        {" "}
-                        {timeProgressElement}
-                    </div>
-                </div>
+                    task={task}
+                    active={active}
+                    timeSpent={timeSpent}
+                    onNameChange={updateTaskName(task.id)}
+                    onEstimationChange={updateTaskEstimation(task.id)}
+                    onActiveChange={updateTaskActive(task.id)}
+                    onDelete={deleteTask(task.id)}
+                />
             );
         });
 

@@ -1,0 +1,51 @@
+
+.task {
+  margin: 5px;
+  padding: 20px 10px 10px 10px;
+  border-radius: 5px;
+  border: transparent solid 2px;
+  background-color: var(--background-high);
+}
+
+.task.active {
+  --interactive: var(--active);
+  border: var(--interactive) solid 2px;
+}
+
+.task .name {
+  width: 100%;
+  min-height: 30px;
+  height: 30px;
+  resize: vertical;
+}
+
+.task > div {
+  margin: 5px 0;
+}
+
+.task progress {
+  border-radius: 5px;
+  border: transparent solid 0;
+  background-color: var(--background-higher);
+  overflow: hidden;
+}
+
+.task progress::-moz-progress-bar {
+  border-radius: 5px;
+}
+
+.task progress.ok::-moz-progress-bar {
+  background-color: var(--progress-ok);
+}
+
+.task progress.worse::-moz-progress-bar {
+  background-color: var(--progress-worse);
+}
+
+.task progress.bad::-moz-progress-bar {
+  background-color: var(--progress-bad);
+}
+
+.task progress.critical::-moz-progress-bar {
+  background-color: var(--progress-critical);
+}
