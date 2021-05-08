@@ -16,11 +16,11 @@ export type Task = {
     deleted: boolean,
 }
 
-// Either start or end of working on a task.
+// Started or started and finished piece of work.
 export type Event = {
     taskId: TaskId,
-    time: DateTime,
-    action: 'start'|'end',
+    start_time: DateTime,
+    end_time: DateTime | null,
 }
 
 export type Settings = {
@@ -61,7 +61,8 @@ export function deserialize(stateString: string): State {
         ...obj,
         events: obj.events.map((e: any) => ({
             ...e,
-            time: DateTime.fromISO(e.time)
+            start_time: DateTime.fromISO(e.start_time),
+            end_time: e.end_time && DateTime.fromISO(e.end_time)
         })),
         settings: {
             ...obj.settings,

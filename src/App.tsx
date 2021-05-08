@@ -30,9 +30,12 @@ export function App() {
   });
 
   // debounce saving state on every change
-  let latestStateRef = React.useRef(state);
+  let latestStateRef = React.useRef({ state, dirty: false });
   let debouncedSaveRef = React.useRef(debounce(
-    () => saveState(latestStateRef.current),
+    () => {
+      saveState(latestStateRef.current.state);
+      latestStateRef.current.dirty = false;
+    },
     5000,
     { trailing: true, leading: false },
   ));
@@ -40,9 +43,9 @@ export function App() {
   // save state before closing the page
   React.useEffect(() => {
     window.onbeforeunload = () => {
-      // persist state only if local storage hasn't been cleared manually
-      if (window.localStorage.getItem('state') !== null) {
-        saveState(latestStateRef.current);
+      // save only if state changed since last last auto-save
+      if (latestStateRef.current.dirty) {
+        saveState(latestStateRef.current.state);
       }
     };
     return () => { window.onbeforeunload = null; };
@@ -50,7 +53,8 @@ export function App() {
 
   const updateStateWithFunction = (updateFunction: StateUpdateFunction) => {
     let newState = updateFunction(state);
-    latestStateRef.current = newState;
+    latestStateRef.current.state = newState;
+    latestStateRef.current.dirty = true;
     debouncedSaveRef.current();
     setState(newState);
   };

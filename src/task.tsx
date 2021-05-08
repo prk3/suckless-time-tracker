@@ -13,9 +13,10 @@ type TaskProps = {
     onEstimationChange: (estimation: ManDays | null) => void,
     onNameChange: (name: string) => void,
     onDelete: () => void,
+    innerRef?: React.Ref<HTMLDivElement>,
 };
 
-export function Task({ task, active, timeSpent, onActiveChange, onEstimationChange, onNameChange, onDelete }: TaskProps) {
+export function Task({ task, active, timeSpent, onActiveChange, onEstimationChange, onNameChange, onDelete, innerRef }: TaskProps) {
 
     const updateName = (ev: any) => {
         onNameChange(ev.target.value);
@@ -68,6 +69,7 @@ export function Task({ task, active, timeSpent, onActiveChange, onEstimationChan
             className={cs("task", active && "active")}
             key={task.id}
             onClick={onlyThisElementClick(toggleActive)}
+            ref={innerRef}
         >
             <div><textarea className="name" value={task.name} onChange={updateName}/></div>
             <div>{"Estimation: "}

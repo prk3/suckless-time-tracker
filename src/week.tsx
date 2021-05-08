@@ -7,39 +7,19 @@ import './week.css';
 
 function weekLogFromEvents(events: Event[], startOfWeek: DateTime) {
     let endOfWeek = startOfWeek.endOf('week');
-    let indexOfFirst = events.findIndex(event => event.time >= startOfWeek);
+    let indexOfFirst = events.findIndex(event => event.start_time >= startOfWeek);
     let eventsToCheck = indexOfFirst === -1 ? [] : events.slice(indexOfFirst);
     let week: { [taskId: number]: Duration }[] = [{}, {}, {}, {}, {}, {}, {}];
-    let started: { [taskId: number]: DateTime } = {};
 
     for (let event of eventsToCheck) {
-        if (event.time > endOfWeek && Object.entries(started).length === 0) {
+        if (event.start_time > endOfWeek) {
             break;
         }
 
-        if (event.time <= endOfWeek && event.action === 'start') {
-            // we can't start a task that has already been started
-            assert(started[event.taskId] === undefined);
-            started[event.taskId] = event.time;
-        }
-
-        if (event.action === 'end') {
-            // task should be started, otherwise it was started before this week and must be ignored
-            if (started[event.taskId] !== undefined) {
-                assert(started[event.taskId] <= event.time);
-                let day = week[started[event.taskId].weekday-1];
-                day[event.taskId] = day[event.taskId]?.plus(event.time.diff(started[event.taskId])) || event.time.diff(started[event.taskId]);
-                delete started[event.taskId];
-            }
-        }
+        let day = week[event.start_time.weekday-1];
+        let taskDuration = (event.end_time || DateTime.local()).diff(event.start_time);
+        day[event.taskId] = day[event.taskId]?.plus(taskDuration) ?? taskDuration;
     }
-
-    // add time between start and now for unfinished tasks
-    Object.entries(started).forEach(([taskIdString, time]) => {
-        let taskId = taskIdString as any as number;
-        let day = week[time.weekday-1];
-        day[taskId] = day[taskId]?.plus(DateTime.local().diff(time)) || DateTime.local().diff(time);
-    });
 
     return week;
 }
