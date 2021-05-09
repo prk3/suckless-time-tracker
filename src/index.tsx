@@ -5,13 +5,13 @@ import { App } from './App';
 import reportWebVitals from './reportWebVitals';
 
 declare global {
-  function dbg(...x: any[]): false;
+  function dbg<T>(a: T): T;
 }
 
 // @ts-ignore
-global.dbg = (...x: any[]) => {
-  console.log(...x);
-  return false;
+global.dbg = function <T>(a: T) {
+  console.log(a);
+  return a;
 };
 
 ReactDOM.render(
