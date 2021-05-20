@@ -27,6 +27,7 @@ export function Week() {
                 <button className="button minus" type="button" onClick={oneWeekBack}>&lt;</button>
                 <span className="week-range">{startOfWeek.toFormat("d LLLL y") + ' - ' + startOfWeek.endOf('week').toFormat("d LLLL y")}</span>
                 <button className="button plus" type="button" onClick={oneWeekForward}>&gt;</button>
+                {" "}
                 <button className="button plus" type="button" onClick={toggleMode}>↷</button>
             </div>
             <div>

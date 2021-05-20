@@ -37,6 +37,7 @@ export type State = {
     events: Event[],
     activeTask: TaskId | null,
     settings: Settings,
+    version: number,
 }
 
 export const initial: State = {
@@ -47,6 +48,7 @@ export const initial: State = {
         manDayDuration: Duration.fromObject({ hours: 7 }),
         eventRetentionMonths: 3,
     },
+    version: 1,
 };
 
 export type StateUpdateFunction = (state: State) => State;

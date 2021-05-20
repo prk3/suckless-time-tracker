@@ -1,5 +1,5 @@
 {
-  "name": "suckless-jira",
+  "name": "suckless-time-tracker",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

@@ -1,11 +1,18 @@
 import { DateTime } from 'luxon';
 import React from 'react';
-import { Event, ManDays, StateContext, TaskId } from './state';
+import { ManDays, StateContext, TaskId } from './state';
 import { Task } from './task';
 import { assert, groupEventsByTaskId, groupTasksByTaskId, calculateTotalTimeFromEvents } from './utils';
 import './tasks.css';
 
 import { DragDropContext, Draggable, Droppable, DropResult, ResponderProvided } from 'react-beautiful-dnd';
+
+const ALERT_MSG = `
+Good day!
+
+This is a small app for time tracking. It's serverless, meaning all data is stored on your device, in local storage. As you can see, it's pretty basic and not well tested. Probably works only on Firefox. Use it at your own risk.
+
+Fell free to make backups of the page. If you only want to only save the time data, you can get it with window.localStorage.getItem('state').`;
 
 export function Tasks() {
     const { state, update } = React.useContext(StateContext);
@@ -166,7 +173,7 @@ export function Tasks() {
         const source = result.source;
         const destination = result.destination;
 
-        if (result.reason == 'DROP' && destination !== undefined) {
+        if (result.reason === 'DROP' && destination !== undefined) {
             update(state => {
                 const sourceIndex = state.tasks.findIndex(e => e === filteredTasks[source.index]);
                 const destinationIndex = state.tasks.findIndex(e => e === filteredTasks[destination.index]);
@@ -212,6 +219,8 @@ export function Tasks() {
                 <button type="button" className="button plus" onClick={addNewTask}>+</button>
                 {" "}
                 <input type="text" value={filter} placeholder="Search..." onChange={updateFilter} />
+                {" "}
+                <button type="button" className="button plus" onClick={() => alert(ALERT_MSG)}>?</button>
             </div>
             <DragDropContext onDragEnd={moveTask}>
                 <Droppable droppableId="tasks">
