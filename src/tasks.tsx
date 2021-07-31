@@ -10,9 +10,11 @@ import { DragDropContext, Draggable, Droppable, DropResult, ResponderProvided } 
 const ALERT_MSG = `
 Good day!
 
-This is a small app for time tracking. It's serverless, meaning all data is stored on your device, in local storage. As you can see, it's pretty basic and not well tested. Probably works only on Firefox. Use it at your own risk.
+This is a small app for time tracking. It's serverless, meaning all data is stored on your device, in local storage*. As you can see, it's pretty basic and not well tested. Probably works only on Firefox. Use it at your own risk.
 
-Fell free to make backups of the page. If you only want to only save the time data, you can get it with window.localStorage.getItem('state').`;
+* You can enable syncing through a self-hosted backend, more on that in README.md at https://github.com/prk3/suckless-time-tracker.
+
+suckless-time-tracker 0.2.0`;
 
 export function Tasks() {
     const { state, update } = React.useContext(StateContext);

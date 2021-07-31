@@ -1,6 +1,92 @@
-# Getting Started with Create React App
+# Suckless time tracker
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## How to
+
+### Backup time tracking data
+
+The time tracking data is saved in `localStorage` under `state` key.
+
+```javascript
+localStorage.getItem('state')
+```
+
+You can copy it and store anywhere you like.
+To restore saved state, set `state` item and refresh browser.
+
+```javascript
+localStorage.setItem('state', '(YOUR_BACKUP_STATE_HERE)')
+```
+
+### Enable syncing
+
+Syncing it totally optional. To use it, you have to host a backend with the following API:
+
+- GET /string - Retrieves the most recent state for authenticated user. Returns:
+  - 200 with version + newline + state in body if user has saved state, e.g. "53\n{"tasks":[],"events":[]}"
+  - 404 if user hasn't saved state
+- PUT /string/(version) - Persists state if the passed version is newer than already saved. Returns:
+  - 200 when state was saved correctly
+  - 409 when server has the same or newer version of state
+
+All endpoints are protected with JWT authentication. The server checks "Authorization: Bearer (token)" header and uses `user` integer property of token's claims to identify user. When token is not valid, the server should return 401 response.
+
+To enable syncing, we'll upload state from one client to the server with this code:
+
+```javascript
+localStorage.setItem('sync', JSON.stringify({
+  authToken: '<YOUR_TOKEN_HERE>', // e.g. 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoxMCwiZXhwIjoxNTE2MjM5MDIyfQ.HD1tPARxtsBHeKzyUrwM6UVLacxhe8K2dVy-piLsj-E'
+  storageUrl: '<STORAGE_URL_WITHOUT_TRAILING_SLASH>', // e.g. 'http://localhost:8000'
+  version: 0,
+  dirty: true,
+  saving: false,
+}));
+```
+
+Refresh the page and check if there aren't any errors in the console.
+
+On other computers run this code to pull data from the server.
+
+```javascript
+localStorage.setItem('sync', JSON.stringify({
+  authToken: '<YOUR_TOKEN_HERE>',
+  storageUrl: '<STORAGE_URL_WITHOUT_TRAILING_SLASH>',
+  version: 0,
+  dirty: false,
+  saving: false,
+}));
+```
+
+Refresh the page to pull data from the server.
+
+From now on, changes made on one machine will be sent to the server and loaded on other computers **ON PAGE REFRESH**. Remember that concurrent edits will desynchronize state and need manual fixing. Wait a bit between making changes and closing the app. If the app doesn't synchronize state before closing, edits from another computer will cause conflicts.
+
+### Force-Pull state
+
+```javascript
+localStorage.setItem('sync', JSON.stringify((sync => ({
+  ...sync,
+  version: 0,
+  dirty: false,
+  saving: false,
+}))(JSON.parse(localStorage.getItem('sync')))));
+```
+
+And then refresh.
+
+### Force-Push state
+
+```javascript
+localStorage.setItem('sync', JSON.stringify((sync => ({
+  ...sync,
+  version: sync.version + 10000,
+  dirty: true,
+  saving: false,
+}))(JSON.parse(localStorage.getItem('sync')))));
+```
+
+And then refresh.
 
 ## Available Scripts
 

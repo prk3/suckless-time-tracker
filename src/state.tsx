@@ -37,10 +37,11 @@ export type State = {
     events: Event[],
     activeTask: TaskId | null,
     settings: Settings,
+    // Number identifying state format. Used for migrating.
     version: number,
 }
 
-export const initial: State = {
+export const initialState: State = {
     tasks: [],
     events: [],
     activeTask: null,
@@ -55,10 +56,21 @@ export type StateUpdateFunction = (state: State) => State;
 
 export type StateUpdate = (fn: StateUpdateFunction) => void;
 
-export const StateContext = React.createContext({ state: initial, update: () => {} } as { state: State, update: StateUpdate });
+export const StateContext = React.createContext({ state: initialState, update: () => {} } as { state: State, update: StateUpdate });
 
-export function deserialize(stateString: string): State {
+export function serializeState(state: State): string {
+    return JSON.stringify(state);
+}
+
+export function deserializeState(stateString: string): State {
     let obj = JSON.parse(stateString);
+
+    // migrations
+    // current version = 1
+    if (obj.version !== 1) {
+        throw new Error(`State in unsupported version "${obj.version}". Update the app.`);
+    }
+
     let hydrated = {
         ...obj,
         events: obj.events.map((e: any) => ({
