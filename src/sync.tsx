@@ -200,8 +200,9 @@ export function SyncProviderInner(props: { initSync: Sync, children: any }) {
                 persistSync(syncRef.current);
 
                 handleStateUpdateRef.current = createStateUpdateHandler();
+
+                // if there are changes waiting, send them immediately
                 if (syncRef.current.dirty) {
-                    // if there are changes waiting, send them immediately
                     handleStateUpdateRef.current?.();
                     handleStateUpdateRef.current?.flush();
                 } else {
@@ -211,9 +212,11 @@ export function SyncProviderInner(props: { initSync: Sync, children: any }) {
             .catch(error => {
                 if (!mountedRef.current) return;
 
-                setStatus('error');
                 console.error("Initializing sync failed.");
                 console.error(error);
+
+                handleStateUpdateRef.current = createResyncingStateUpdateHandler();
+                setStatus('error');
             });
     });
 
@@ -251,8 +254,6 @@ export function SyncProviderInner(props: { initSync: Sync, children: any }) {
                     .catch(error => {
                         if (!mountedRef.current) return;
 
-                        let becameDirty = syncRef.current.dirty;
-
                         syncRef.current.saving = false;
                         syncRef.current.dirty = true;
                         persistSync(syncRef.current);
@@ -261,13 +262,23 @@ export function SyncProviderInner(props: { initSync: Sync, children: any }) {
                         console.error(error);
 
                         handleStateUpdateRef.current = createStateUpdateHandler();
-                        if (becameDirty) {
-                            handleStateUpdateRef.current?.();
-                            setStatus('dirty');
-                        } else {
-                            setStatus('error');
-                        }
+                        setStatus('error');
                     });
+            },
+            UPDATE_DEBOUNCE_WAIT_MS,
+            { trailing: true, leading: false },
+        );
+    }
+
+    function createResyncingStateUpdateHandler() {
+        return debounce(
+            () => {
+                if (!mountedRef.current) return;
+
+                handleStateUpdateRef.current?.cancel();
+                handleStateUpdateRef.current = null;
+
+                syncWithServerRef.current();
             },
             UPDATE_DEBOUNCE_WAIT_MS,
             { trailing: true, leading: false },
@@ -283,11 +294,11 @@ export function SyncProviderInner(props: { initSync: Sync, children: any }) {
             if (!syncRef.current.dirty) {
                 syncRef.current.dirty = true;
                 persistSync(syncRef.current);
+            }
 
-                // set status to dirty only if we aren't currently syncing
-                if (handleStateUpdateRef.current !== null) {
-                    setStatus('dirty');
-                }
+            // set status to dirty only if we aren't currently syncing
+            if (handleStateUpdateRef.current !== null) {
+                setStatus('dirty');
             }
 
             handleStateUpdateRef.current?.();

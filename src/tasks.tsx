@@ -15,7 +15,7 @@ This is a small app for time tracking. It's serverless, meaning all data is stor
 
 * You can enable syncing through a self-hosted backend, more on that in README.md at https://github.com/prk3/suckless-time-tracker.
 
-suckless-time-tracker 0.4.0`;
+suckless-time-tracker 0.4.1`;
 
 export function Tasks() {
     const { state, updateState } = useState();
