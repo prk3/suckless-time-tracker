@@ -1,11 +1,12 @@
-import { DateTime } from 'luxon';
 import React from 'react';
-import { ManDays, StateContext, TaskId } from './state';
+import { DateTime } from 'luxon';
+import { DragDropContext, Draggable, Droppable, DropResult, ResponderProvided } from 'react-beautiful-dnd';
+import { ManDays, TaskId, useState } from './state';
 import { Task } from './task';
 import { assert, groupEventsByTaskId, groupTasksByTaskId, calculateTotalTimeFromEvents } from './utils';
-import './tasks.css';
+import { useSync } from './sync';
 
-import { DragDropContext, Draggable, Droppable, DropResult, ResponderProvided } from 'react-beautiful-dnd';
+import './tasks.css';
 
 const ALERT_MSG = `
 Good day!
@@ -14,17 +15,18 @@ This is a small app for time tracking. It's serverless, meaning all data is stor
 
 * You can enable syncing through a self-hosted backend, more on that in README.md at https://github.com/prk3/suckless-time-tracker.
 
-suckless-time-tracker 0.2.0`;
+suckless-time-tracker 0.4.0`;
 
 export function Tasks() {
-    const { state, update } = React.useContext(StateContext);
+    const { state, updateState } = useState();
+    const { status } = useSync();
     const [filter, setFilter] = React.useState('');
 
     let taskMap = React.useMemo(() => groupTasksByTaskId(state.tasks), [state.tasks]);
     let story = React.useMemo(() => groupEventsByTaskId(state.events), [state.events]);
 
     const addNewTask = () => {
-        update(state => {
+        updateState(state => {
             let id = Math.floor(Math.random() * 1_000_000_000);
 
             return {
@@ -56,7 +58,7 @@ export function Tasks() {
         assert(taskMap[id] !== undefined);
         assert(taskMap[id].deleted === false);
 
-        update(state => ({
+        updateState(state => ({
             ...state,
             tasks: state.tasks.map(task => task.id !== id
                 ? task
@@ -70,7 +72,7 @@ export function Tasks() {
         assert(taskMap[id] !== undefined);
         assert(taskMap[id].deleted === false);
 
-        update(state => ({
+        updateState(state => ({
             ...state,
             tasks: state.tasks.map(task => task.id !== id
                 ? task
@@ -84,7 +86,7 @@ export function Tasks() {
         assert(taskMap[id] !== undefined);
         assert(taskMap[id].deleted === false);
 
-        update(state => {
+        updateState(state => {
             if (active) {
                 // Task must be inactive if we want to activate it.
                 assert(state.activeTask !== id);
@@ -138,7 +140,7 @@ export function Tasks() {
         assert(taskMap[id] !== undefined);
         assert(taskMap[id].deleted === false);
 
-        update(state => {
+        updateState(state => {
             let events;
             let activeTask;
             if (state.activeTask === id) {
@@ -176,7 +178,7 @@ export function Tasks() {
         const destination = result.destination;
 
         if (result.reason === 'DROP' && destination !== undefined) {
-            update(state => {
+            updateState(state => {
                 const sourceIndex = state.tasks.findIndex(e => e === filteredTasks[source.index]);
                 const destinationIndex = state.tasks.findIndex(e => e === filteredTasks[destination.index]);
 
@@ -223,6 +225,8 @@ export function Tasks() {
                 <input type="text" value={filter} placeholder="Search..." onChange={updateFilter} />
                 {" "}
                 <button type="button" className="button plus" onClick={() => alert(ALERT_MSG)}>?</button>
+                {" "}
+                <span className={"sync-indicator sync-indicator-" + status} title={status}>●</span>
             </div>
             <DragDropContext onDragEnd={moveTask}>
                 <Droppable droppableId="tasks">

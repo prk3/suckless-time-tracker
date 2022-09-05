@@ -1,6 +1,6 @@
 import React from 'react';
 import { DateTime, Duration } from 'luxon';
-import { Event, StateContext } from './state';
+import { Event, useState } from './state';
 import { groupTasksByTaskId } from './utils';
 import { range } from 'lodash';
 
@@ -36,7 +36,6 @@ function topFromTime(time: DateTime) {
 }
 
 function heightFromStartAndEnd(start: DateTime, end: DateTime | null) {
-    console.log(start.toString(), end?.toString());
     const end_ = end || DateTime.local();
 
     if (!start.endOf('day').equals(end_.endOf('day'))) {
@@ -59,7 +58,7 @@ type Props = {
 }
 
 export default function WeekTimeline({ startOfWeek }: Props) {
-    const { state } = React.useContext(StateContext);
+    const { state } = useState();
 
     const taskMap = React.useMemo(() => groupTasksByTaskId(state.tasks), [state.tasks]);
     const weekEvents = React.useMemo(() => selectWeekEvents(state.events, startOfWeek), [state.events, startOfWeek]);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { DateTime, Duration } from 'luxon';
-import { Event, StateContext } from './state';
+import { Event, useState } from './state';
 import { groupTasksByTaskId } from './utils';
 
 function formatDuration(duration: Duration): string {
@@ -37,7 +37,7 @@ type Props = {
 }
 
 export default function WeekSummary({ startOfWeek }: Props) {
-    const { state } = React.useContext(StateContext);
+    const { state } = useState();
 
     const taskMap = React.useMemo(() => groupTasksByTaskId(state.tasks), [state.tasks]);
     const weekEvents = React.useMemo(() => selectWeekEvents(state.events, startOfWeek), [state.events, startOfWeek]);

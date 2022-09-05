@@ -2,3 +2,32 @@
   margin: 10px;
   text-align: center;
 }
+
+.sync-indicator {
+  display: inline-block;
+  font-size: 20px;
+  line-height: 0px;
+
+  cursor: default;
+  user-select: none;
+}
+
+.sync-indicator-off {
+  color: var(--background-higher);
+}
+
+.sync-indicator-dirty {
+  color: var(--accent);
+}
+
+.sync-indicator-synced {
+  color: var(--active);
+}
+
+.sync-indicator-syncing {
+  color: var(--inactive);
+}
+
+.sync-indicator-error {
+  color: var(--progress-critical);
+}
